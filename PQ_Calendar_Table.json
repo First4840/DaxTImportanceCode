@@ -1,0 +1,26 @@
+#####Powerquey to create calendar table dimension every day until end of thsi year#####
+
+
+let
+    Source = Table.FromRows(Json.Document(Binary.Decompress(Binary.FromText("i45WMtQ31DcyMLRUio0FAA==", BinaryEncoding.Base64), Compression.Deflate)), let _t = ((type nullable text) meta [Serialized.Text = true]) in type table [Date = _t]),
+    #"Changed Type" = Table.TransformColumnTypes(Source,{{"Date", type date}}),
+    #"Added Custom" = Table.AddColumn(#"Changed Type", "Today", each Number.ToText(Date.Year(DateTime.LocalNow())) & "12" & "31"),
+    #"Changed Type5" = Table.TransformColumnTypes(#"Added Custom",{{"Today", type date}}),
+    #"Changed Type1" = Table.TransformColumnTypes(#"Changed Type5",{{"Today", type date}}),
+    #"Renamed Columns" = Table.RenameColumns(#"Changed Type1",{{"Date", "StartDate"}, {"Today", "EndDate"}}),
+    #"Changed Type2" = Table.TransformColumnTypes(#"Renamed Columns",{{"StartDate", type date}}),
+    #"Changed Type with Locale" = Table.TransformColumnTypes(#"Changed Type2", {{"StartDate", type date}}, "en-US"),
+    #"Added Custom1" = Table.AddColumn(#"Changed Type with Locale", "Dates", each {Number.From([StartDate])..Number.From([EndDate])}),
+    #"Expanded Dates" = Table.ExpandListColumn(#"Added Custom1", "Dates"),
+    #"Changed Type3" = Table.TransformColumnTypes(#"Expanded Dates",{{"Dates", type date}}),
+    #"Added Custom2" = Table.AddColumn(#"Changed Type3", "Custom", each Date.ToText([Dates],"yyyyMM")),
+    #"Removed Columns" = Table.RemoveColumns(#"Added Custom2",{"StartDate", "EndDate", "Dates"}),
+    #"Removed Duplicates" = Table.Distinct(#"Removed Columns"),
+    #"Renamed Columns1" = Table.RenameColumns(#"Removed Duplicates",{{"Custom", "YearMonth"}}),
+    #"Added Custom3" = Table.AddColumn(#"Renamed Columns1", "Custom", each [YearMonth] & "01"),
+    #"Changed Type4" = Table.TransformColumnTypes(#"Added Custom3",{{"Custom", type date}}),
+    #"Renamed Columns2" = Table.RenameColumns(#"Changed Type4",{{"Custom", "c_DATE"}}),
+    #"Added Custom4" = Table.AddColumn(#"Renamed Columns2", "Year", each Text.Start([YearMonth],4)),
+    #"Sorted Rows" = Table.Sort(#"Added Custom4",{{"Year", Order.Descending}, {"c_DATE", Order.Descending}})
+in
+    #"Sorted Rows"
